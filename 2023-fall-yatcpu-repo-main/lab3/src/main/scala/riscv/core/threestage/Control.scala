@@ -15,7 +15,16 @@
 package riscv.core.threestage
 
 import chisel3._
+import riscv.Parameters
 
 class Control extends Module {
+  //三周期CPU中 跳转命令标识一定来自ex段
+  val io = IO(new Bundle{
+    val jump_flag_from_ex = Input(Bool())
+
+    val if_jump_flag = Output(Bool())
+  })
+
+  io.if_jump_flag := io.jump_flag_from_ex
   // Lab3(Flush)
 }
