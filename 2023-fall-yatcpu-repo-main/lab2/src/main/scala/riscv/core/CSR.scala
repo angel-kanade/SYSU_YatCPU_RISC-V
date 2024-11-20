@@ -72,12 +72,31 @@ class CSR extends Module {
 
   //lab2(CLINTCSR)
   //what data should be passed from csr to clint (Note: what should clint see is the next state of the CPU)
-  /*
-  io.clint_access_bundle.mstatus :=
-  io.clint_access_bundle.mtvec :=
-  io.clint_access_bundle.mcause :=
-  io.clint_access_bundle.mepc :=
-  */
+  //确保是数据是最新的 即如果当前有数据写入则传出此数据 没有则为原先的
+  io.clint_access_bundle.mstatus := Mux(
+    io.reg_write_enable_id && io.reg_write_address_id === CSRRegister.MSTATUS,
+    io.reg_write_data_ex,
+    mstatus
+  )
+
+  io.clint_access_bundle.mtvec := Mux(
+    io.reg_write_enable_id && io.reg_write_address_id === CSRRegister.MTVEC,
+    io.reg_write_data_ex,
+    mtvec
+  )
+
+  io.clint_access_bundle.mcause := Mux(
+    io.reg_write_enable_id && io.reg_write_address_id === CSRRegister.MCAUSE,
+    io.reg_write_data_ex,
+    mcause
+  )
+
+  io.clint_access_bundle.mepc := Mux(
+    io.reg_write_enable_id && io.reg_write_address_id === CSRRegister.MEPC,
+    io.reg_write_data_ex,
+    mepc
+  )
+
 
   when(io.clint_access_bundle.direct_write_enable) {
     mstatus := io.clint_access_bundle.mstatus_write_data
