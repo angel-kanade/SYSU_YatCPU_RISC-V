@@ -17,6 +17,7 @@ package riscv.core.fivestage_final
 import chisel3._
 import chisel3.util._
 import riscv.Parameters
+import riscv.core.fivestage_final
 
 object InstructionTypes {
   val L = "b0000011".U
@@ -220,10 +221,49 @@ class InstructionDecode extends Module {
     )
 
   // Lab3(Final)
-  io.ctrl_jump_instruction := false.B
-  io.clint_jump_flag := false.B
-  io.clint_jump_address := 0.U
-  io.if_jump_flag := false.B
-  io.if_jump_address := 0.U
+  //标志跳转相关的指令
+  io.ctrl_jump_instruction := (opcode === Instructions.jal) ||
+                              (opcode === Instructions.jalr) ||
+                              (opcode === InstructionTypes.B)
+
+  //判断是否要jump jal指令直接跳 条件分支须比较 记得有无符号的转换
+  io.clint_jump_flag := (opcode === Instructions.jal) ||
+    (opcode === Instructions.jalr) ||
+    (opcode === InstructionTypes.B) && MuxLookup(funct3, false.B)(
+      IndexedSeq(
+        InstructionsTypeB.beq -> (io.reg1_data === io.reg2_data),
+        InstructionsTypeB.bne -> (io.reg1_data =/= io.reg2_data),
+        InstructionsTypeB.blt -> (io.reg1_data.asSInt < io.reg2_data.asSInt),
+        InstructionsTypeB.bge -> (io.reg1_data.asSInt >= io.reg2_data.asSInt),
+        InstructionsTypeB.bltu -> (io.reg1_data.asUInt < io.reg2_data.asUInt),
+        InstructionsTypeB.bgeu -> (io.reg1_data.asUInt >= io.reg2_data.asUInt)
+      )
+    )
+
+  //根据op类型判断立即数与谁相加即可
+  when(opcode === Instructions.jalr){
+    io.clint_jump_address := io.ex_immediate + io.reg1_data
+  }.otherwise{
+    io.clint_jump_address := io.ex_immediate + io.instruction_address
+  }
+
+  //下边有关IntroductionFetch的 在上边基础上加上中断相关的信号判断即可
+  io.if_jump_flag := io.interrupt_assert || (opcode === Instructions.jal) ||
+    (opcode === Instructions.jalr) ||
+    (opcode === InstructionTypes.B) && MuxLookup(funct3, false.B)(
+      IndexedSeq(
+        InstructionsTypeB.beq -> (io.reg1_data === io.reg2_data),
+        InstructionsTypeB.bne -> (io.reg1_data =/= io.reg2_data),
+        InstructionsTypeB.blt -> (io.reg1_data.asSInt < io.reg2_data.asSInt),
+        InstructionsTypeB.bge -> (io.reg1_data.asSInt >= io.reg2_data.asSInt),
+        InstructionsTypeB.bltu -> (io.reg1_data.asUInt < io.reg2_data.asUInt),
+        InstructionsTypeB.bgeu -> (io.reg1_data.asUInt >= io.reg2_data.asUInt)
+      )
+    )
+
+  io.if_jump_address := Mux(io.interrupt_assert,
+    io.interrupt_handler_address,
+    io.ex_immediate + Mux(opcode === Instructions.jalr, io.reg1_data, io.instruction_address)
+  )
   // Lab3(Final) End
 }
