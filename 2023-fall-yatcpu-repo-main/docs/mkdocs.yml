@@ -1,0 +1,12 @@
+site_name: 2023-Yatcpu-Fall-Docs
+site_author: Tokisakix
+copyright: Copyright © 2023 Tokisakix
+
+nav:
+- 前言: index.md
+- 如何一键环境配置: env.md
+- 如何一键烧板: board.md
+- 最终验收: test.md
+
+theme:
+  name: material
