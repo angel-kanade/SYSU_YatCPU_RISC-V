@@ -17,7 +17,7 @@ package riscv.core.fivestage_forward
 import chisel3._
 import chisel3.util._
 import riscv.Parameters
-import riscv.core.{ALU, ALUControl}
+import riscv.core.{ALU, ALUControl, fivestage_forward}
 
 
 class Execute extends Module {
@@ -61,8 +61,19 @@ class Execute extends Module {
   alu.io.func := alu_ctrl.io.alu_funct
 
   // Lab3(Forward)
-  val reg1_data = 0.U
-  val reg2_data = 0.U
+  val reg1_data = MuxLookup(io.reg1_forward, io.reg1_data)(
+    IndexedSeq(
+      ForwardingType.ForwardFromWB -> io.forward_from_wb,
+      ForwardingType.ForwardFromMEM -> io.forward_from_mem
+    )
+  )
+
+  val reg2_data = MuxLookup(io.reg2_forward, io.reg2_data)(
+    IndexedSeq(
+      ForwardingType.ForwardFromWB -> io.forward_from_wb,
+      ForwardingType.ForwardFromMEM -> io.forward_from_mem
+    )
+  )
   // Lab3(Forward) End
 
   alu.io.op1 := Mux(

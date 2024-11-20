@@ -14,7 +14,9 @@
 
 package riscv.core.fivestage_forward
 
+import Chisel.MuxLookup
 import chisel3._
+import chisel3.util.MuxCase
 import riscv.Parameters
 
 object ForwardingType {
@@ -37,8 +39,29 @@ class Forwarding extends Module {
     val reg2_forward_ex = Output(UInt(2.W))
   })
 
+//  forwarding.io.rs1_ex := id2ex.io.output_regs_reg1_read_address
+//  forwarding.io.rs2_ex := id2ex.io.output_regs_reg2_read_address
+//  forwarding.io.rd_mem := ex2mem.io.output_regs_write_address
+//  forwarding.io.reg_write_enable_mem := ex2mem.io.output_regs_write_enable
+//  forwarding.io.rd_wb := mem2wb.io.output_regs_write_address
+//  forwarding.io.reg_write_enable_wb := mem2wb.io.output_regs_write_enable
+
   // Lab3(Forward)
-  io.reg1_forward_ex := 0.U
-  io.reg2_forward_ex := 0.U
+  //根据输入值确定ForwardType
+  io.reg1_forward_ex := MuxCase(
+    ForwardingType.NoForward,
+    Seq(
+      (io.reg_write_enable_mem && (io.rd_mem === io.rs1_ex) && (io.rd_mem =/= 0.U)) -> ForwardingType.ForwardFromMEM,
+      (io.reg_write_enable_wb && (io.rd_wb === io.rs1_ex) && (io.rd_wb =/= 0.U)) -> ForwardingType.ForwardFromWB
+    )
+  )
+
+  io.reg2_forward_ex := MuxCase(
+    ForwardingType.NoForward,
+    Seq(
+      (io.reg_write_enable_mem && (io.rd_mem === io.rs2_ex) && (io.rd_mem =/= 0.U)) -> ForwardingType.ForwardFromMEM,
+      (io.reg_write_enable_wb && (io.rd_wb === io.rs2_ex) && (io.rd_wb =/= 0.U)) -> ForwardingType.ForwardFromWB
+    )
+  )
   // Lab3(Forward) End
 }
