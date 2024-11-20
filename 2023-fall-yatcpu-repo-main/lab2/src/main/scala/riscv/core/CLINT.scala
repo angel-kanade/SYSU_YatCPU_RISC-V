@@ -14,6 +14,7 @@
 
 package riscv.core
 
+import Chisel.Cat
 import chisel3._
 import chisel3.util.MuxLookup
 import riscv.Parameters
@@ -78,30 +79,31 @@ class CLINT extends Module {
     io.instruction_address + 4.U,
   )
   //lab2(CLINTCSR)
-  /*
-  val interrupt_enable =
-
+  //mstatus寄存器中MIE位是第3位 MPIE是第7位
+  //0x80000007L Machine Timer Interrupt 0x8000000BL Reserved
+  //interrupt_flag第0位来确定程序中断是外部中断还是软件中断
+  //需导入Cat 否则试用'#'来链接字段
   when(io.interrupt_flag =/= InterruptStatus.None && interrupt_enable) {
-    io.csr_bundle.mstatus_write_data :=
-    io.csr_bundle.mepc_write_data :=
-    io.csr_bundle.mcause_write_data :=
-    io.csr_bundle.direct_write_enable :=
-    io.interrupt_assert :=
-    io.interrupt_handler_address :=
+    io.csr_bundle.mstatus_write_data := Cat(io.csr_bundle.mstatus(31, 4), 0.U(1.W), io.csr_bundle.mstatus(2, 0))
+    io.csr_bundle.mepc_write_data := instruction_address
+    io.csr_bundle.mcause_write_data := Mux(io.interrupt_flag(0), 0x80000007L.U, 0x8000000BL.U)
+    io.csr_bundle.direct_write_enable := true.B
+    io.interrupt_assert := true.B
+    io.interrupt_handler_address := io.csr_bundle.mtvec
   }.elsewhen(io.instruction === InstructionsRet.mret) {
-    io.csr_bundle.mstatus_write_data :=
-    io.csr_bundle.mepc_write_data :=
-    io.csr_bundle.mcause_write_data :=
-    io.csr_bundle.direct_write_enable :=
-    io.interrupt_assert :=
-    io.interrupt_handler_address :=
+    //MIE位为MPIE的值
+    io.csr_bundle.mstatus_write_data := Cat(io.csr_bundle.mstatus(31, 4), io.csr_bundle.mstatus(7), io.csr_bundle.mstatus(2, 0))
+    io.csr_bundle.mepc_write_data := instruction_address
+    io.csr_bundle.mcause_write_data := 0x80000007L.U //Machine Timer Interrupt
+    io.csr_bundle.direct_write_enable := true.B
+    io.interrupt_assert := true.B
+    io.interrupt_handler_address := io.csr_bundle.mepc //返回原先被中断的程序地址 利用中断的形式中断中断程序
   }.otherwise {
-    io.csr_bundle.mstatus_write_data :=
-    io.csr_bundle.mepc_write_data :=
-    io.csr_bundle.mcause_write_data :=
-    io.csr_bundle.direct_write_enable :=
-    io.interrupt_assert :=
-    io.interrupt_handler_address :=
+    io.csr_bundle.mstatus_write_data := Cat(io.csr_bundle.mstatus(31, 4), 0.U(1.W), io.csr_bundle.mstatus(2, 0))
+    io.csr_bundle.mepc_write_data := instruction_address
+    io.csr_bundle.mcause_write_data := Mux(io.interrupt_flag(0), 0x80000007L.U, 0x8000000BL.U)
+    io.csr_bundle.direct_write_enable := false.B
+    io.interrupt_assert := false.B
+    io.interrupt_handler_address := io.csr_bundle.mtvec
   }
-   */
 }
