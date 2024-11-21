@@ -220,50 +220,57 @@ class InstructionDecode extends Module {
       funct3 === InstructionsTypeCSR.csrrc || funct3 === InstructionsTypeCSR.csrrci
     )
 
+//  id.io.instruction := if2id.io.output_instruction
+//  id.io.instruction_address := if2id.io.output_instruction_address
+//  id.io.reg1_data := regs.io.read_data1
+//  id.io.reg2_data := regs.io.read_data2
+//  id.io.forward_from_mem := mem.io.forward_data
+//  id.io.forward_from_wb := wb.io.regs_write_data
+//  id.io.reg1_forward := forwarding.io.reg1_forward_id
+//  id.io.reg2_forward := forwarding.io.reg2_forward_id
+//  id.io.interrupt_assert := clint.io.id_interrupt_assert
+//  id.io.interrupt_handler_address := clint.io.id_interrupt_handler_address
+
   // Lab3(Final)
-  //标志跳转相关的指令
-  io.ctrl_jump_instruction := (opcode === Instructions.jal) ||
-                              (opcode === Instructions.jalr) ||
-                              (opcode === InstructionTypes.B)
-
-  //判断是否要jump jal指令直接跳 条件分支须比较 记得有无符号的转换
-  io.clint_jump_flag := (opcode === Instructions.jal) ||
-    (opcode === Instructions.jalr) ||
-    (opcode === InstructionTypes.B) && MuxLookup(funct3, false.B)(
-      IndexedSeq(
-        InstructionsTypeB.beq -> (io.reg1_data === io.reg2_data),
-        InstructionsTypeB.bne -> (io.reg1_data =/= io.reg2_data),
-        InstructionsTypeB.blt -> (io.reg1_data.asSInt < io.reg2_data.asSInt),
-        InstructionsTypeB.bge -> (io.reg1_data.asSInt >= io.reg2_data.asSInt),
-        InstructionsTypeB.bltu -> (io.reg1_data.asUInt < io.reg2_data.asUInt),
-        InstructionsTypeB.bgeu -> (io.reg1_data.asUInt >= io.reg2_data.asUInt)
-      )
+  //设计时发现下边数据重复利用较多 添加变量储存使代码更简洁
+  val reg1_data = MuxLookup(io.reg1_forward, io.reg1_data)(
+    IndexedSeq(
+      ForwardingType.ForwardFromMEM -> io.forward_from_mem,
+      ForwardingType.ForwardFromWB -> io.forward_from_wb
     )
-
-  //根据op类型判断立即数与谁相加即可
-  when(opcode === Instructions.jalr){
-    io.clint_jump_address := io.ex_immediate + io.reg1_data
-  }.otherwise{
-    io.clint_jump_address := io.ex_immediate + io.instruction_address
-  }
-
-  //下边有关IntroductionFetch的 在上边基础上加上中断相关的信号判断即可
-  io.if_jump_flag := io.interrupt_assert || (opcode === Instructions.jal) ||
-    (opcode === Instructions.jalr) ||
-    (opcode === InstructionTypes.B) && MuxLookup(funct3, false.B)(
-      IndexedSeq(
-        InstructionsTypeB.beq -> (io.reg1_data === io.reg2_data),
-        InstructionsTypeB.bne -> (io.reg1_data =/= io.reg2_data),
-        InstructionsTypeB.blt -> (io.reg1_data.asSInt < io.reg2_data.asSInt),
-        InstructionsTypeB.bge -> (io.reg1_data.asSInt >= io.reg2_data.asSInt),
-        InstructionsTypeB.bltu -> (io.reg1_data.asUInt < io.reg2_data.asUInt),
-        InstructionsTypeB.bgeu -> (io.reg1_data.asUInt >= io.reg2_data.asUInt)
-      )
-    )
-
-  io.if_jump_address := Mux(io.interrupt_assert,
-    io.interrupt_handler_address,
-    io.ex_immediate + Mux(opcode === Instructions.jalr, io.reg1_data, io.instruction_address)
   )
+
+  val reg2_data = MuxLookup(io.reg2_forward, io.reg2_data)(
+    IndexedSeq(
+      ForwardingType.ForwardFromMEM -> io.forward_from_mem,
+      ForwardingType.ForwardFromWB -> io.forward_from_wb
+    )
+  )
+
+  val instruction_jump_flag = (opcode === Instructions.jal) || (opcode === Instructions.jalr) ||
+    ((opcode === InstructionTypes.B) && MuxLookup(funct3, false.B)(
+      IndexedSeq(
+      InstructionsTypeB.beq -> (reg1_data === reg2_data),
+      InstructionsTypeB.bne -> (reg1_data =/= reg2_data),
+      InstructionsTypeB.blt -> (reg1_data.asSInt < reg2_data.asSInt),
+      InstructionsTypeB.bge -> (reg1_data.asSInt >= reg2_data.asSInt),
+      InstructionsTypeB.bltu -> (reg1_data.asUInt < reg2_data.asUInt),
+      InstructionsTypeB.bgeu -> (reg1_data.asUInt >= reg2_data.asUInt)
+      )
+    ))
+
+  val instruction_jump_address = io.ex_immediate + Mux(opcode === Instructions.jalr, reg1_data, io.instruction_address)
+
+  //标志当前指令是否为跳转指令
+  io.ctrl_jump_instruction := (opcode === Instructions.jal) || (opcode === Instructions.jalr) || (opcode === InstructionTypes.B)
+
+  io.clint_jump_flag := instruction_jump_flag
+  io.clint_jump_address := instruction_jump_address
+
+//  inst_fetch.io.jump_flag_id := id.io.if_jump_flag
+//  inst_fetch.io.jump_address_id := id.io.if_jump_address
+  //inst_fetch取值需要考虑是否中断
+  io.if_jump_flag := io.interrupt_assert || instruction_jump_flag
+  io.if_jump_address := Mux(io.interrupt_assert, io.interrupt_handler_address, instruction_jump_address)
   // Lab3(Final) End
 }

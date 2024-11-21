@@ -34,10 +34,36 @@ class Control extends Module {
     val if_stall = Output(Bool())
   })
 
+//  ctrl.io.jump_flag := id.io.if_jump_flag
+//  ctrl.io.jump_instruction_id := id.io.ctrl_jump_instruction
+//  ctrl.io.rs1_id := id.io.regs_reg1_read_address
+//  ctrl.io.rs2_id := id.io.regs_reg2_read_address
+//  ctrl.io.memory_read_enable_ex := id2ex.io.output_memory_read_enable
+//  ctrl.io.rd_ex := id2ex.io.output_regs_write_address
+//  ctrl.io.memory_read_enable_mem := ex2mem.io.output_memory_read_enable
+//  ctrl.io.rd_mem := ex2mem.io.output_regs_write_address
+
   // Lab3(Final)
-  io.if_flush := false.B
-  io.id_flush := false.B
-  io.pc_stall := false.B
-  io.if_stall := false.B
+  //考虑到分支跳转指令在id段便要完成取数计算 故要在以下条件下阻塞
+  val hazard_flag = ((io.jump_instruction_id || io.memory_read_enable_ex) && io.rd_ex =/= 0.U && (io.rs1_id === io.rd_ex || io.rs2_id === io.rd_ex)) ||
+                    ((io.memory_read_enable_mem && io.jump_instruction_id) && io.rd_mem =/= 0.U && (io.rs1_id === io.rd_mem || io.rs2_id === io.rd_mem))
+
+  //此时分支判断在id段 故不能flush 要让其正常完成
+  when(hazard_flag){
+    io.if_flush := false.B
+    io.id_flush := true.B
+    io.pc_stall := true.B
+    io.if_stall := true.B
+  }.elsewhen((io.jump_flag)){
+    io.if_flush := true.B
+    io.id_flush := false.B
+    io.pc_stall := false.B
+    io.if_stall := false.B
+  }.otherwise{
+    io.if_flush := false.B
+    io.id_flush := false.B
+    io.pc_stall := false.B
+    io.if_stall := false.B
+  }
   // Lab3(Final) End
 }
