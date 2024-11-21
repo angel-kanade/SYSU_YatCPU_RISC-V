@@ -43,8 +43,8 @@ class Control extends Module {
 
 
   // Lab3(Stall)
-  //根据检测之前指令的寄存器访存情况确定是否有没有数据冒险
-  val data_hazard_flag = (io.rd_ex =/= 0.U && io.reg_write_enable_ex && (io.rd_ex === io.rs1_id || io.rd_ex === io.rs2_id)) ||
+  //根据检测之前指令的寄存器访存情况确定是否有没有冒险
+  val hazard_flag = (io.rd_ex =/= 0.U && io.reg_write_enable_ex && (io.rd_ex === io.rs1_id || io.rd_ex === io.rs2_id)) ||
                          (io.rd_mem =/= 0.U && io.reg_write_enable_mem && (io.rd_mem === io.rs1_id || io.rd_mem === io.rs2_id))
 
   when(io.jump_flag){
@@ -52,7 +52,7 @@ class Control extends Module {
     io.id_flush := true.B
     io.pc_stall := false.B
     io.if_stall := false.B
-  }.elsewhen(data_hazard_flag){
+  }.elsewhen(hazard_flag){
     io.if_flush := false.B
     io.id_flush := true.B
     io.pc_stall := true.B

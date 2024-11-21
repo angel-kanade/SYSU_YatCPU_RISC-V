@@ -38,15 +38,15 @@ class Control extends Module {
 //  ctrl.io.rd_ex := id2ex.io.output_regs_write_address
 
   // Lab3(Forward)
-  //加上转发功能后 只可能在上条指令MEM阶段写入寄存器产生数据冒险
-  val data_hazard_flag = (io.rd_ex =/= 0.U && io.memory_read_enable_ex && (io.rd_ex === io.rs1_id || io.rd_ex === io.rs2_id))
+  //加上转发功能后 只可能在上条指令MEM阶段写入寄存器产生冒险
+  val hazard_flag = (io.rd_ex =/= 0.U && io.memory_read_enable_ex && (io.rd_ex === io.rs1_id || io.rd_ex === io.rs2_id))
 
   when(io.jump_flag){
     io.if_flush := true.B
     io.id_flush := true.B
     io.pc_stall := false.B
     io.if_stall := false.B
-  }.elsewhen((data_hazard_flag)){
+  }.elsewhen((hazard_flag)){
     io.if_flush := false.B
     io.id_flush := true.B
     io.pc_stall := true.B
