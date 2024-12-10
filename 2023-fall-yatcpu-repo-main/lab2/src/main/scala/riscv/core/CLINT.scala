@@ -94,7 +94,7 @@ class CLINT extends Module {
     //MIE位为MPIE的值
     io.csr_bundle.mstatus_write_data := Cat(io.csr_bundle.mstatus(31, 4), io.csr_bundle.mstatus(7), io.csr_bundle.mstatus(2, 0))
     io.csr_bundle.mepc_write_data := instruction_address
-    io.csr_bundle.mcause_write_data := 0x80000007L.U //Machine Timer Interrupt
+    io.csr_bundle.mcause_write_data := io.csr_bundle.mcause
     io.csr_bundle.direct_write_enable := true.B
     io.interrupt_assert := true.B
     io.interrupt_handler_address := io.csr_bundle.mepc //返回原先被中断的程序地址 利用中断的形式中断中断程序
