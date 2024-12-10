@@ -80,7 +80,8 @@ class CLINT extends Module {
   )
   //lab2(CLINTCSR)
   //mstatus寄存器中MIE位是第3位 MPIE是第7位
-  //0x80000007L Machine Timer Interrupt 0x8000000BL Reserved
+  //0x80000007L Machine Timer Interrupt 表示由timer造成的外部中断
+  //0x8000000BL Machine External Interrupt 表示由uart造成的软件中断
   //interrupt_flag第0位来确定程序中断是外部中断还是软件中断
   //需导入Cat 否则试用'#'来链接字段
   when(io.interrupt_flag =/= InterruptStatus.None && interrupt_enable) {
@@ -92,12 +93,13 @@ class CLINT extends Module {
     io.interrupt_handler_address := io.csr_bundle.mtvec
   }.elsewhen(io.instruction === InstructionsRet.mret) {
     //MIE位为MPIE的值
+    //返回原先被中断的程序地址 利用中断的形式中断中断程序
     io.csr_bundle.mstatus_write_data := Cat(io.csr_bundle.mstatus(31, 4), io.csr_bundle.mstatus(7), io.csr_bundle.mstatus(2, 0))
-    io.csr_bundle.mepc_write_data := instruction_address
-    io.csr_bundle.mcause_write_data := io.csr_bundle.mcause
+    io.csr_bundle.mepc_write_data := io.csr_bundle.mepc //保持原样
+    io.csr_bundle.mcause_write_data := io.csr_bundle.mcause //保持原样
     io.csr_bundle.direct_write_enable := true.B
     io.interrupt_assert := true.B
-    io.interrupt_handler_address := io.csr_bundle.mepc //返回原先被中断的程序地址 利用中断的形式中断中断程序
+    io.interrupt_handler_address := io.csr_bundle.mepc //回到之前执行的位置
   }.otherwise {
     io.csr_bundle.mstatus_write_data := Cat(io.csr_bundle.mstatus(31, 4), 0.U(1.W), io.csr_bundle.mstatus(2, 0))
     io.csr_bundle.mepc_write_data := instruction_address
